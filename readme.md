@@ -1,36 +1,150 @@
-# Recruiting software 2024/25
+# Project 2
 
-Welcome to the recruiting repository of the software team at E-Agle Trento Racing Team.
+> ⚠️ This document is fairly technical to maintain brevity, if you have **any** questions ask your recruiter or come visit us at floor -2 of Povo 2.
 
-This test is designed to get an idea of your technical skills and workflow. Assignments are built around the tools we use daily while developing software for our vehicle.
+## Abstract
 
-You have **2 weeks** to complete the project. Time assigned is not representative of the effort needed to finish the work, it is instead calculated to give you the option of working at your own pace, with plenty of time to **ask questions**.
+Build the most basic and crucial part of a telemetry software: logging every information received.
 
-## Software
+The functions in **fake_receiver.h** will simulate an interface to CAN bus (protocol used in automotive to share data between ECUs). The data received must be parsed and then eventually logged.
 
-To see the specific assignments please follow one of the following links, based on the team you were assigned to.
+You will implement a basic [Finite State Machine](#finite-state-machine) with Idle and Run states, both in Idle and Run you will receive data from "CAN" and [Parse](#parsing) them. Two specific messages will trigger a state transition. The telemetry will log the data only in Run state. Then, with the parsed messages, compute some basic [statistics](#statistics).  
+To receive messages, you will need to use a multithread approach, this means that you will need to start a thread.
+The thread will only receive data using the function *can_receive* (defined in *fake_receiver.h*). When implementing the second thread, take into consideration data race, and be careful to avoid two thread accessing the same memory location simultaneously.  
+The received data has to be processed in the main thread.  
+The second thread must be implemented in a separate file from main.cc .
 
-- [IT & Automation](./it_automation/readme.md)
-- [Microcontrollers](./microcontrollers/readme.md)
-- [Steering wheel](./steering_wheel/readme.md)
-- [Telemetry](./telemetry/readme.md)
-- [Driverless](./driverless/readme.md)
+So the requirements are:
 
-## Usage
+- [Finite State Machine](#finite-state-machine)
+- [Logging](#logged-file)
+- [Parse](#parsing)
+- [statistics](#statistics)
 
-Download this repo. **Don't fork it**.
-Create a new public repository on your GitHub account named:
+**_Message example_**
 
-```text
-recruiting-sw-<project-you-chose>
+```CAN
+0A0#6601
 ```
 
-Then send us the link of the repo so that we will be able to review it.
+### Finite State Machine
 
-- Telemetry: Nicolò Marconi (@nicolomarconi (https://t.me/nicolomarconi))
-- Microcontrollers/Steering wheel: Antonio Gelain (@antonio_gelain (https://t.me/antonio_gelain))
-- Driverless: Gabriele Stulzer (@GabrieleStulzer (https://t.me/GabrieleStulzer))
+Use a state machine architecture to separate the functionalities in Idle and Run state.
 
-## Feedback
+#### Idle
 
-Feedback on the assignments is very welcome and encouraged. Feel free to ask questions or propose a change by writing us at fsae@eagletrt.it, messaging your recruiter on telegram, or by visiting us at Povo 2, Floor -2.
+Receive messages and parse them, when you receive the start message transition to Run state. This defines that a new session is started.
+
+#### Run
+
+Receive and parse messages, save the raw messages in a file (each new session must have a different file). If you receive the stop message, then close the file and transition back to Idle.
+
+#### Extra states
+
+If you want you can add some extra states. Is not required.
+
+### Logged file
+
+The output file will have a line for each message received prepended with the timestamp at wich the message was received.
+
+```CAN
+// received message
+0A0#6601
+
+// logged message
+(unix_timestamp) 0A0#6601
+```
+
+Each session must have a unique filename.
+
+### Start and Stop messages
+
+```CAN
+// Start
+0A0#6601
+0A0#FF01
+
+// Stop
+0A0#66FF
+```
+
+The start messages will be two, if one of them is received then transition to Run. If you are already in run, then do nothing.
+
+### Parsing
+
+You need to parse the received messages. **Don't** simply match string by string.
+
+Message description:
+
+```CAN
+0A0#6601
+```
+
+The message is composed by ID and payload.
+The string received is formatted as **_\<ID>#\<PAYLOAD>_**.
+
+#### ID
+
+In the example is **_0A0_**, it is expressed in hexadecimal, so it represent 160 in decimal base. This field is at most 12 bits, use a uin16_t to represent it.
+
+#### Payload
+
+It is composed by at most 8 bytes, each composed by 2 chars in hexadecimal. So in the example there are only 2 bytes:
+
+```CAN
+// first example
+6601
+
+66 -> first byte  -> 102 in decimal
+01 -> second byte -> 1 in decimal
+
+// second example
+90291
+this is a nonvalid payload as the number of chars is not even.
+```
+
+### Statistics
+
+For each message ID, compute the statistics of the elapsed time beween messages of the same ID.
+
+Compute the mean time (in milliseconds) between each message. Note that message frequencies are different for each ID. Each time the FSM transitions to Stop, your script must save a [CSV](https://it.wikipedia.org/wiki/Comma-separated_values) containing the computed values (in number):
+
+|ID|number_of_messages|mean_time|
+|-:|-:|-:|
+|0A0|1|100|
+|181|100|0.01|
+
+## Getting started
+
+### Prerequisites
+
+- `git` and a [GitHub](https://github.com) account
+- C/C++ toolchain, with CMake
+
+For Debian / Ubuntu you can use:
+
+```bash
+sudo apt install build-essential cmake
+```
+
+### Setup
+
+- Download the project files [here](https://download-directory.github.io/?url=https%3A%2F%2Fgithub.com%2Feagletrt%2Frecruiting-sw%2Ftree%2Fmaster%2Ftelemetry%2Fproject_2)
+- Create a new GitHub repository and upload the project files via git
+- Start working on the task, creating git commits as you make progress
+- When it's time to deliver, please send your recruiter a link to your github repository
+
+### Building
+
+The project contains a CMakeLists.txt with a basic setup to build the project.
+
+The first time building the project:
+
+```bash
+mkdir -p build
+cd build
+cmake ..
+make -j$(nproc)
+```
+
+This will build the executable that will be located in `./bin` directory.
