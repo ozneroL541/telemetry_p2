@@ -59,30 +59,35 @@ char finite_state_machine::is_running() {
     return result;
 }
 
-void finite_state_machine::add_data(std::string data) {
+void finite_state_machine::add_data(message data) {
     pthread_mutex_lock(&this->data_mx);
     this->data_list.push_back(data);
     pthread_mutex_unlock(&this->data_mx);
     sem_post(&this->data_sem);
 }
 
-std::string finite_state_machine::read_first_data() {
-    std::string first_data;
+message finite_state_machine::read_first_data() {
+    /** First data message from the list */
+    message data = message("", 0); /* TODO: Check memory leaks */
     sem_wait(&this->data_sem);
     pthread_mutex_lock(&this->data_mx);
     if (!data_list.empty()) {
-        first_data = data_list.front();
+        data = data_list.front();
         data_list.pop_front();
+    } else {
+        fprintf(stderr, "Data list is empty when trying to read first data\n");
     }
     pthread_mutex_unlock(&this->data_mx);
-    return first_data;
+    return data;
 }
 
 void finite_state_machine::receive_data() {
     /** Receive data from the CAN bus */
-    char message[MAX_CAN_MESSAGE_SIZE];
+    char m[MAX_CAN_MESSAGE_SIZE];
     /** Number of bytes received */
-    int bytes_received = can_receive(message);
+    int bytes_received = can_receive(m);
+    /** Create a message object */
+    message msg(m, bytes_received);
 
     /* Check for errors */
     if (bytes_received < 0) {
@@ -90,18 +95,17 @@ void finite_state_machine::receive_data() {
         return;
     }
 
-    /* Convert received bytes into a string and add to the list */
-    this->add_data(std::string(message, (bytes_received > 0) ? bytes_received : 0));
+    this->add_data(msg);
 }
 
-void finite_state_machine::idle_process(std::string data) {
-    if (is_start_message(data.c_str())) {
+void finite_state_machine::idle_process(message data) {
+    if (is_start_message(data.get_msg())) {
         this->transition_to_running();
     }
 }
 
-void finite_state_machine::running_process(std::string data) {
-    if (is_stop_message(data.c_str())) {
+void finite_state_machine::running_process(message data) {
+    if (is_stop_message(data.get_msg())) {
         this->transition_to_idle();
     } else {
         /* TODO: Implement data processing logic for RUNNING state */
@@ -110,9 +114,9 @@ void finite_state_machine::running_process(std::string data) {
 
 void finite_state_machine::process_data() {
     /** Data to process */
-    std::string data = this->read_first_data();
+    message data = this->read_first_data();
     /* Check if data is empty */
-    if (data.empty()) {
+    if (data.get_msg().empty()) {
         return;
     }
     /* Process the data based on the current state */

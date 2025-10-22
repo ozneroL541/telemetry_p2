@@ -2,6 +2,7 @@
 #define FSM_H
 
 #include "fake_receiver.h"
+#include "msg.h"
 
 #include <pthread.h>
 #include <list>
@@ -46,7 +47,7 @@ class finite_state_machine {
         /** Mutex for state access */
         pthread_mutex_t  state_mx;
         /** List of received data */
-        std::list<std::string> data_list;
+        std::list<message> data_list;
         /** Mutex for data access */
         pthread_mutex_t  data_mx;
         /** Semaphore for data availability */
@@ -74,12 +75,12 @@ class finite_state_machine {
          * Adds data to the data list
          * @param data The data to be added
          */
-        void add_data(std::string data);
+        void add_data(message data);
         /** 
          * Returns the first data in the data list
          * @return The first data in the list
          */
-        std::string read_first_data();
+        message read_first_data();
         /** 
          * Receives data from the CAN bus and processes it according to the current state
          */
@@ -88,12 +89,12 @@ class finite_state_machine {
          * Processes data in the IDLE state
          * @param data The data to be processed
          */
-        void idle_process(std::string data);
+        void idle_process(message data);
         /** 
          * Processes data in the RUNNING state
          * @param data The data to be processed
          */
-        void running_process(std::string data);
+        void running_process(message data);
         /** 
          * Processes the data in the data list
          */
