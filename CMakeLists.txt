@@ -21,6 +21,8 @@ add_library(
     ${CMAKE_CURRENT_SOURCE_DIR}/fake_receiver.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/msg.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/fsm.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/can_reader.cpp
+    #${CMAKE_CURRENT_SOURCE_DIR}/src/statistics_heandler.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
