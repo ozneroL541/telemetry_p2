@@ -9,10 +9,6 @@
 #include <string>
 #include <semaphore.h>
 
-extern "C"{
-    #include "fake_receiver.h"
-}
-
 /** 
  * State of the machine
  */
@@ -77,11 +73,6 @@ class finite_state_machine {
          */
         message read_first_data();
         /** 
-         * Receives data from the CAN bus and processes it according to the current state
-         * @return 0 on success, -1 on failure
-         */
-        char receive_data();
-        /** 
          * Processes data in the IDLE state
          * @param data The data to be processed
          */
@@ -135,13 +126,6 @@ class finite_state_machine {
          * Processes the data in the data list
          */
         void process_data();
-        /** 
-         * Thread function to receive data
-         * from the CAN bus
-         * @param arg TMCH
-         * @return arg
-         */
-        void * receive_data_thread(void * arg);
         /** 
          * Thread function to process data
          * from the data list

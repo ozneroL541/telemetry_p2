@@ -108,24 +108,6 @@ message finite_state_machine::read_first_data() {
     return data;
 }
 
-char finite_state_machine::receive_data() {
-    /** Receive data from the CAN bus */
-    char m[MAX_CAN_MESSAGE_SIZE] = {0};
-    /** Number of bytes received */
-    int bytes_received = can_receive(m);
-    /** Create a message object */
-    message msg(m, bytes_received);
-
-    /* Check for errors */
-    if (bytes_received > 0) {
-        this->add_data(msg);
-        return 0;
-    } else {
-        fprintf(stderr, "Error receiving CAN message\n");
-        return -1;
-    } 
-}
-
 void finite_state_machine::log_message(message data) {
     if (this->log_file != NULL) {
         fprintf(
@@ -165,16 +147,6 @@ void finite_state_machine::process_data() {
     } else if (this->is_running()) {
         this->running_process(data);
     }
-}
-
-void * finite_state_machine::receive_data_thread(void * arg) {
-    /** Exit flag */
-    char exit = 0;
-    while (!this->is_transmission_over() && !exit) {
-        exit = this->receive_data();
-    }
-    this->set_transmission_over(1);
-    pthread_exit(arg);
 }
 
 void * finite_state_machine::process_data_thread(void * arg) {
