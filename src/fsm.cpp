@@ -1,5 +1,6 @@
 #include "fsm.h"
 #include <stdio.h>
+#include "../fake_receiver.h"
 
 static char is_start_message(std::string message) {
     for (const auto& start_msg : start_messages) {
@@ -105,19 +106,11 @@ void finite_state_machine::receive_data() {
     message msg(m, bytes_received);
 
     /* Check for errors */
-    if (bytes_received < 0) {
+    if (bytes_received > 0) {
+        this->add_data(msg);
+    } else {
         fprintf(stderr, "Error receiving CAN message\n");
-        return;
-    }
-
-    this->add_data(msg);
-}
-
-void finite_state_machine::idle_process(message data) {
-    if (is_start_message(data.get_msg())) {
-        this->transition_to_running();
-        this->log_message(data);
-    }
+    } 
 }
 
 void finite_state_machine::log_message(message data) {
@@ -127,6 +120,13 @@ void finite_state_machine::log_message(message data) {
             "%s\n", 
             data.get_log()
         );
+    }
+}
+
+void finite_state_machine::idle_process(message data) {
+    if (is_start_message(data.get_msg())) {
+        this->transition_to_running();
+        this->log_message(data);
     }
 }
 
@@ -150,4 +150,18 @@ void finite_state_machine::process_data() {
     } else if (this->is_running()) {
         this->running_process(data);
     }
+}
+
+void * finite_state_machine::receive_data_thread(void * arg) {
+    while (1) {
+        this->receive_data();
+    }
+    pthread_exit(arg);
+}
+
+void * finite_state_machine::process_data_thread(void * arg) {
+    while (1) {
+        this->process_data();
+    }
+    pthread_exit(arg);
 }

@@ -10,6 +10,7 @@ set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-pthread -O0 -g -w")
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}
     # ${CMAKE_CURRENT_SOURCE_DIR}/other/dirs
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 add_library(
@@ -18,6 +19,8 @@ add_library(
     
     # Sources
     ${CMAKE_CURRENT_SOURCE_DIR}/fake_receiver.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/msg.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/fsm.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}

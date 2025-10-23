@@ -1,7 +1,6 @@
 #ifndef FSM_H
 #define FSM_H
 
-#include "fake_receiver.h"
 #include "msg.h"
 
 #include <pthread.h>
@@ -116,6 +115,20 @@ class finite_state_machine {
          * Processes the data in the data list
          */
         void process_data();
+        /** 
+         * Thread function to receive data
+         * from the CAN bus
+         * @param arg TMCH
+         * @return arg
+         */
+        void * receive_data_thread(void * arg);
+        /** 
+         * Thread function to process data
+         * from the data list
+         * @param arg TMCH
+         * @return arg
+         */
+        void * process_data_thread(void * arg);
 };
 
 #endif
