@@ -1,6 +1,4 @@
 #include "fsm.h"
-#include <stdio.h>
-#include "../fake_receiver.h"
 
 static char is_start_message(std::string message) {
     for (const auto& start_msg : start_messages) {

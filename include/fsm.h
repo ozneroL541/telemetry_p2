@@ -3,10 +3,15 @@
 
 #include "msg.h"
 
+#include <stdio.h>
 #include <pthread.h>
 #include <list>
 #include <string>
 #include <semaphore.h>
+
+extern "C"{
+    #include "fake_receiver.h"
+}
 
 /** 
  * State of the machine
