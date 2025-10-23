@@ -7,8 +7,12 @@
 #define MAX_CAN_MESSAGE_SIZE 20
 #endif
 
-class message
-{
+/** 
+ * Class to handle the messages containing 
+ * their content, length and timestamp.
+ * @class message
+ */
+class message {
 private:
     /** Message content */
     char msg[MAX_CAN_MESSAGE_SIZE];

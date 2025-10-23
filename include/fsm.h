@@ -46,7 +46,7 @@ class finite_state_machine {
         state_t state;
         /** Mutex for state access */
         pthread_mutex_t  state_mx;
-        /** List of received data */
+        /** List of received datas */
         std::list<message> data_list;
         /** Mutex for data access */
         pthread_mutex_t  data_mx;
@@ -61,21 +61,6 @@ class finite_state_machine {
          * Transitions the state machine to the IDLE state
         */
         void transition_to_idle();
-        /** 
-         * Checks if the current state is IDLE 
-         * @return 1 if the state is IDLE, 0 otherwise
-         */
-        char is_idle();
-        /** 
-         * Checks if the current state is RUNNING 
-         * @return 1 if the state is RUNNING, 0 otherwise
-         */
-        char is_running();
-        /** 
-         * Adds data to the data list
-         * @param data The data to be added
-         */
-        void add_data(message data);
         /** 
          * Returns the first data in the data list
          * @return The first data in the list
@@ -95,10 +80,6 @@ class finite_state_machine {
          * @param data The data to be processed
          */
         void running_process(message data);
-        /** 
-         * Processes the data in the data list
-         */
-        void process_data();
     public:
         /** 
          * Constructor.
@@ -109,6 +90,25 @@ class finite_state_machine {
          * Destructor.
          */
         ~finite_state_machine();
+        /** 
+         * Checks if the current state is IDLE 
+         * @return 1 if the state is IDLE, 0 otherwise
+         */
+        char is_idle();
+        /** 
+         * Checks if the current state is RUNNING 
+         * @return 1 if the state is RUNNING, 0 otherwise
+         */
+        char is_running();
+        /** 
+         * Adds data to the data list
+         * @param data The data to be added
+         */
+        void add_data(message data);
+        /** 
+         * Processes the data in the data list
+         */
+        void process_data();
 };
 
 #endif
