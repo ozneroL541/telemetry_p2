@@ -58,7 +58,11 @@ class finite_state_machine {
         sem_t data_sem;
         /** Log file pointer */
         FILE *log_file;
-        
+        /** Flag indicating if transmission is finished */
+        char transmission_over;
+        /** Mutex for transmission_over access */
+        pthread_mutex_t transmission_over_mx;
+
         /** 
          * Transitions the state machine to the RUNNING state 
          */
@@ -74,8 +78,9 @@ class finite_state_machine {
         message read_first_data();
         /** 
          * Receives data from the CAN bus and processes it according to the current state
+         * @return 0 on success, -1 on failure
          */
-        void receive_data();
+        char receive_data();
         /** 
          * Processes data in the IDLE state
          * @param data The data to be processed
@@ -111,6 +116,16 @@ class finite_state_machine {
          * @return 1 if the state is RUNNING, 0 otherwise
          */
         char is_running();
+        /** 
+         * Sets the transmission over flag
+         * @param status The status to set
+         */
+        void set_transmission_over(char status);
+        /** 
+         * Gets the transmission over flag
+         * @return The transmission over status
+         */
+        char is_transmission_over();
         /** 
          * Adds data to the data list
          * @param data The data to be added

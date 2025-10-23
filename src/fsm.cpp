@@ -16,7 +16,9 @@ static char is_stop_message(std::string message) {
 finite_state_machine::finite_state_machine() {
     pthread_mutex_init(&this->state_mx, NULL);
     pthread_mutex_init(&this->data_mx, NULL);
+    pthread_mutex_init(&this->transmission_over_mx, NULL);
     sem_init(&this->data_sem, 0, 0);
+    this->transmission_over = 0;
     this->log_file = NULL;
     this->state = IDLE;
     data_list.clear();
@@ -25,12 +27,10 @@ finite_state_machine::finite_state_machine() {
 finite_state_machine::~finite_state_machine() {
     pthread_mutex_destroy(&this->state_mx);
     pthread_mutex_destroy(&this->data_mx);
-    sem_destroy(&this->data_sem);
+    pthread_mutex_destroy(&this->transmission_over_mx);
+    fclose(this->log_file);
     data_list.clear();
-    if (this->log_file != NULL) {
-        fflush(this->log_file);
-        fclose(this->log_file);
-    }
+    sem_destroy(&this->data_sem);
 }
 
 void finite_state_machine::transition_to_running() {
@@ -50,7 +50,6 @@ void finite_state_machine::transition_to_idle() {
     pthread_mutex_lock(&this->state_mx);
     this->state = IDLE;
     if (this->log_file != NULL) {
-        fflush(this->log_file);
         fclose(this->log_file);
         this->log_file = NULL;
     }
@@ -70,6 +69,20 @@ char finite_state_machine::is_running() {
     pthread_mutex_lock(&this->state_mx);
     result = this->state == RUNNING ? 1 : 0;
     pthread_mutex_unlock(&this->state_mx);
+    return result;
+}
+
+void finite_state_machine::set_transmission_over(char status) {
+    pthread_mutex_lock(&this->transmission_over_mx);
+    this->transmission_over = status;
+    pthread_mutex_unlock(&this->transmission_over_mx);
+}
+
+char finite_state_machine::is_transmission_over() {
+    char result = 0;
+    pthread_mutex_lock(&this->transmission_over_mx);
+    result = this->transmission_over;
+    pthread_mutex_unlock(&this->transmission_over_mx);
     return result;
 }
 
@@ -95,9 +108,9 @@ message finite_state_machine::read_first_data() {
     return data;
 }
 
-void finite_state_machine::receive_data() {
+char finite_state_machine::receive_data() {
     /** Receive data from the CAN bus */
-    char m[MAX_CAN_MESSAGE_SIZE];
+    char m[MAX_CAN_MESSAGE_SIZE] = {0};
     /** Number of bytes received */
     int bytes_received = can_receive(m);
     /** Create a message object */
@@ -106,8 +119,10 @@ void finite_state_machine::receive_data() {
     /* Check for errors */
     if (bytes_received > 0) {
         this->add_data(msg);
+        return 0;
     } else {
         fprintf(stderr, "Error receiving CAN message\n");
+        return -1;
     } 
 }
 
@@ -118,6 +133,7 @@ void finite_state_machine::log_message(message data) {
             "%s\n", 
             data.get_log()
         );
+        fflush(this->log_file);
     }
 }
 
@@ -142,6 +158,7 @@ void finite_state_machine::process_data() {
     if (data.get_msg().empty()) {
         return;
     }
+    /* TODO: add data parsing*/
     /* Process the data based on the current state */
     if (this->is_idle()) {
         this->idle_process(data);
@@ -151,14 +168,17 @@ void finite_state_machine::process_data() {
 }
 
 void * finite_state_machine::receive_data_thread(void * arg) {
-    while (1) {
-        this->receive_data();
+    /** Exit flag */
+    char exit = 0;
+    while (!this->is_transmission_over() && !exit) {
+        exit = this->receive_data();
     }
+    this->set_transmission_over(1);
     pthread_exit(arg);
 }
 
 void * finite_state_machine::process_data_thread(void * arg) {
-    while (1) {
+    while (!this->is_transmission_over() || !sem_trywait(&this->data_sem)) {
         this->process_data();
     }
     pthread_exit(arg);
