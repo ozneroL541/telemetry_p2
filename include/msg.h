@@ -32,6 +32,16 @@ public:
     /** Destructor */
     ~message();
     /**
+     * Get the timestamp of the message
+     * @return The message timestamp
+     */
+    time_t get_timestamp();
+    /**
+     * Get the message ID
+     * @return The message ID
+     */
+    int16_t get_id();
+    /**
      * Get the message content as a string
      * @return The message content
      */

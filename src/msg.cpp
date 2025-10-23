@@ -11,6 +11,10 @@ message::message(const char msg[MAX_CAN_MESSAGE_SIZE], const int length) {
 
 message::~message() {}
 
+time_t message::get_timestamp() {
+    return this->timestamp;
+}
+
 std::string message::get_msg() {
     return std::string(msg, length);
 }
