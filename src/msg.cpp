@@ -18,6 +18,7 @@ std::string message::get_msg() {
 char * message::get_log() {
     /** Generate a log entry with timestamp and message */
     static char log_buffer[MAX_LOG_SIZE];
+    /** Get the length of the message */
     int len = snprintf(
         log_buffer, 
         MAX_LOG_SIZE, 
@@ -26,6 +27,9 @@ char * message::get_log() {
         this->length, 
         this->msg
     );
-    printf("Generated log of length %d: %s\n", len, log_buffer);
+    
+    if (len <= 0 || len >= MAX_LOG_SIZE) {
+        log_buffer[0] = '\0';
+    }
     return log_buffer;
 }

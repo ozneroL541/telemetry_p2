@@ -116,6 +116,7 @@ void finite_state_machine::receive_data() {
 void finite_state_machine::idle_process(message data) {
     if (is_start_message(data.get_msg())) {
         this->transition_to_running();
+        this->log_message(data);
     }
 }
 
@@ -130,10 +131,9 @@ void finite_state_machine::log_message(message data) {
 }
 
 void finite_state_machine::running_process(message data) {
+    this->log_message(data);
     if (is_stop_message(data.get_msg())) {
         this->transition_to_idle();
-    } else {
-        log_message(data);
     }
 }
 
