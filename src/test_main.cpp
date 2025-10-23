@@ -1,9 +1,10 @@
+// src/test_testmain.cpp
 #include "fsm.h"
 #include "msg.h"
 #include "msg_info.h"
-#include <stdio.h>
 
-int main(void) {
+
+int main() {
     finite_state_machine fsm;
 
     /* Simulate receiving a start message */
@@ -16,6 +17,13 @@ int main(void) {
     } else {
         printf("FSM failed to transition to RUNNING state.\n");
     }
+    /* Simulate receiving a more messages */
+    message data_msg1("0A0#1234", 8);
+    fsm.add_data(data_msg1);
+    fsm.process_data();
+    message data_msg2("0A0#5678", 8);
+    fsm.add_data(data_msg2);
+    fsm.process_data();
 
     /* Simulate receiving a stop message */
     message stop_msg("0A0#66FF", 8);

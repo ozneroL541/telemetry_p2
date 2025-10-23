@@ -18,6 +18,7 @@ finite_state_machine::finite_state_machine() {
     pthread_mutex_init(&this->state_mx, NULL);
     pthread_mutex_init(&this->data_mx, NULL);
     sem_init(&this->data_sem, 0, 0);
+    this->log_file = NULL;
     this->state = IDLE;
     data_list.clear();
 }
@@ -27,20 +28,34 @@ finite_state_machine::~finite_state_machine() {
     pthread_mutex_destroy(&this->data_mx);
     sem_destroy(&this->data_sem);
     data_list.clear();
+    if (this->log_file != NULL) {
+        fflush(this->log_file);
+        fclose(this->log_file);
+    }
 }
 
 void finite_state_machine::transition_to_running() {
+    time_t current_timestamp = time(NULL);
+    std::string filename = std::to_string(current_timestamp) + ".log";
     pthread_mutex_lock(&this->state_mx);
     this->state = RUNNING;
+    this->log_file = fopen(filename.c_str(), "a");
+    if (this->log_file == NULL) {
+        fprintf(stderr, "Failed to open log file: %s\n", filename.c_str());
+        this->state = IDLE;
+    }
     pthread_mutex_unlock(&this->state_mx);
-    /* TODO: Implement any additional logic for transitioning to RUNNING state */
 }
 
 void finite_state_machine::transition_to_idle() {
     pthread_mutex_lock(&this->state_mx);
     this->state = IDLE;
+    if (this->log_file != NULL) {
+        fflush(this->log_file);
+        fclose(this->log_file);
+        this->log_file = NULL;
+    }
     pthread_mutex_unlock(&this->state_mx);
-    /* TODO: Implement any additional logic for transitioning to IDLE state */
 }
 
 char finite_state_machine::is_idle() {
@@ -104,11 +119,21 @@ void finite_state_machine::idle_process(message data) {
     }
 }
 
+void finite_state_machine::log_message(message data) {
+    if (this->log_file != NULL) {
+        fprintf(
+            this->log_file, 
+            "%s\n", 
+            data.get_log()
+        );
+    }
+}
+
 void finite_state_machine::running_process(message data) {
     if (is_stop_message(data.get_msg())) {
         this->transition_to_idle();
     } else {
-        /* TODO: Implement data processing logic for RUNNING state */
+        log_message(data);
     }
 }
 

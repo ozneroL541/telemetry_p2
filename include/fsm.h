@@ -52,6 +52,8 @@ class finite_state_machine {
         pthread_mutex_t  data_mx;
         /** Semaphore for data availability */
         sem_t data_sem;
+        /** Log file pointer */
+        FILE *log_file;
         
         /** 
          * Transitions the state machine to the RUNNING state 
@@ -80,6 +82,11 @@ class finite_state_machine {
          * @param data The data to be processed
          */
         void running_process(message data);
+        /** 
+         * Logs the message to the log file
+         * @param data The data to be logged
+         */
+        void log_message(message data);
     public:
         /** 
          * Constructor.

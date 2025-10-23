@@ -7,6 +7,8 @@
 #define MAX_CAN_MESSAGE_SIZE 20
 #endif
 
+#define MAX_LOG_SIZE (MAX_CAN_MESSAGE_SIZE + 12)
+
 /** 
  * Class to handle the messages containing 
  * their content, length and timestamp.
@@ -34,6 +36,11 @@ public:
      * @return The message content
      */
     std::string get_msg();
+    /**
+     * Get a log with unix timestamp and message
+     * @return The message log
+     */
+    char * get_log();
 };
 
 #endif
