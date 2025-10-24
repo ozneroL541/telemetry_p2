@@ -3,6 +3,7 @@
 
 #include "msg.h"
 #include "parser.h"
+#include "statistics_handler.h"
 
 #include <stdio.h>
 #include <pthread.h>
@@ -48,6 +49,10 @@ class finite_state_machine {
         char transmission_over;
         /** Mutex for transmission_over access */
         pthread_mutex_t transmission_over_mx;
+        /** Statistics handler */
+        statistics_handler * stats_handler;
+        /** Mutex for statistics_handler access */
+        pthread_mutex_t stats_handler_mx;
 
         /** 
          * Transitions the state machine to the RUNNING state 
@@ -83,6 +88,16 @@ class finite_state_machine {
          */
         void log_message(parsed_msg pmsg);
         /** 
+         * Updates statistics based on the parsed message
+         * @param pmsg The message to update statistics with
+         */
+        void update_statistics(const parsed_msg pmsg);
+        /** 
+         * Do what is needed in RUNNING state
+         * @param pmsg The data to be processed
+         */
+        void do_running_stuff(const parsed_msg pmsg);
+        /** 
          * Template function to add an element to a list
          * @param el The element to be added
          * @param list The list to which the element is added
@@ -90,7 +105,7 @@ class finite_state_machine {
          * @param sem The semaphore for the list
          */
         template<typename T>
-        void add_el_to_list(T el, std::list<T> &list, pthread_mutex_t &mx, sem_t &sem);
+        void add_el_to_list(const T el, std::list<T> &list, pthread_mutex_t &mx, sem_t &sem);
         /** 
          * Template function to read the first element from a list
          * @param list The list from which to read the element
@@ -124,7 +139,7 @@ class finite_state_machine {
          * Sets the transmission over flag
          * @param status The status to set
          */
-        void set_transmission_over(char status);
+        void set_transmission_over(const char status);
         /** 
          * Gets the transmission over flag
          * @return The transmission over status
@@ -134,12 +149,12 @@ class finite_state_machine {
          * Adds data to the data list
          * @param data The data to be added
          */
-        void add_data(message data);
+        void add_data(const message data);
         /** 
          * Adds a parsed message to the parsed list
          * @param pdata The parsed message to be added
          */
-        void add_parsed_msg(parsed_msg pdata);
+        void add_parsed_msg(const parsed_msg pdata);
         /** 
          * Parses data from the data list
          */

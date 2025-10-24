@@ -5,11 +5,13 @@ finite_state_machine::finite_state_machine() {
     pthread_mutex_init(&this->data_mx, NULL);
     pthread_mutex_init(&this->transmission_over_mx, NULL);
     pthread_mutex_init(&this->parsed_list_mx, NULL);
+    pthread_mutex_init(&this->stats_handler_mx, NULL);
     sem_init(&this->parsed_list_sem, 0, 0);
     sem_init(&this->data_sem, 0, 0);
     this->transmission_over = 0;
     this->log_file = NULL;
     this->state = IDLE;
+    this->stats_handler = NULL;
     data_list.clear();
     parsed_list.clear();
 }
@@ -19,15 +21,19 @@ finite_state_machine::~finite_state_machine() {
     pthread_mutex_destroy(&this->data_mx);
     pthread_mutex_destroy(&this->transmission_over_mx);
     pthread_mutex_destroy(&this->parsed_list_mx);
+    pthread_mutex_destroy(&this->stats_handler_mx);
     fclose(this->log_file);
     data_list.clear();
     parsed_list.clear();
     sem_destroy(&this->data_sem);
     sem_destroy(&this->parsed_list_sem);
+    if (this->stats_handler != NULL) {
+        delete this->stats_handler;
+    }
 }
 
 template <typename T>
-void finite_state_machine::add_el_to_list(T el, std::list<T> &list, pthread_mutex_t &mx, sem_t &sem) {
+void finite_state_machine::add_el_to_list(const T el, std::list<T> &list, pthread_mutex_t &mx, sem_t &sem) {
     pthread_mutex_lock(&mx);
     list.push_back(el);
     pthread_mutex_unlock(&mx);
@@ -65,12 +71,20 @@ void finite_state_machine::transition_to_running() {
 }
 
 void finite_state_machine::transition_to_idle() {
+    pthread_mutex_lock(&this->stats_handler_mx);
     pthread_mutex_lock(&this->state_mx);
+    if (this->stats_handler != NULL) {
+        this->stats_handler->print_stats();
+        delete this->stats_handler;
+        this->stats_handler = NULL;
+    }
+    pthread_mutex_unlock(&this->stats_handler_mx);
     this->state = IDLE;
     if (this->log_file != NULL) {
         fclose(this->log_file);
         this->log_file = NULL;
     }
+       
     pthread_mutex_unlock(&this->state_mx);
 }
 
@@ -90,7 +104,7 @@ char finite_state_machine::is_running() {
     return result;
 }
 
-void finite_state_machine::set_transmission_over(char status) {
+void finite_state_machine::set_transmission_over(const char status) {
     pthread_mutex_lock(&this->transmission_over_mx);
     this->transmission_over = status;
     pthread_mutex_unlock(&this->transmission_over_mx);
@@ -104,7 +118,7 @@ char finite_state_machine::is_transmission_over() {
     return result;
 }
 
-void finite_state_machine::add_data(message data) {
+void finite_state_machine::add_data(const message data) {
     add_el_to_list<message>(data, this->data_list, this->data_mx, this->data_sem);
 }
 
@@ -116,7 +130,7 @@ parsed_msg finite_state_machine::read_first_parsed_msg() {
     return read_first<parsed_msg>(this->parsed_list, this->parsed_list_mx, this->parsed_list_sem);
 }
 
-void finite_state_machine::add_parsed_msg(parsed_msg pdata) {
+void finite_state_machine::add_parsed_msg(const parsed_msg pdata) {
     add_el_to_list<parsed_msg>(pdata, this->parsed_list, this->parsed_list_mx, this->parsed_list_sem);
 }
 
@@ -145,15 +159,30 @@ void finite_state_machine::log_message(parsed_msg pmsg) {
     }
 }
 
+void finite_state_machine::update_statistics(const parsed_msg pmsg) {
+    pthread_mutex_lock(&this->stats_handler_mx);
+    if (this->stats_handler == NULL) {
+        this->stats_handler = new statistics_handler(pmsg);
+    } else {
+        this->stats_handler->add_message(pmsg);
+    }
+    pthread_mutex_unlock(&this->stats_handler_mx);   
+}
+
+void finite_state_machine::do_running_stuff(const parsed_msg pmsg) {
+    this->log_message(pmsg);
+    this->update_statistics(pmsg);
+}
+
 void finite_state_machine::idle_process(parsed_msg pmsg) {
     if (pmsg.is_start_message()) {
         this->transition_to_running();
-        this->log_message(pmsg);
+        this->do_running_stuff(pmsg);
     }
 }
 
 void finite_state_machine::running_process(parsed_msg pmsg) {
-    this->log_message(pmsg);
+    this->do_running_stuff(pmsg);
     if (pmsg.is_stop_message()) {
         this->transition_to_idle();
     }

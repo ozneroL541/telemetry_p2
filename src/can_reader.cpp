@@ -13,7 +13,7 @@ char read_can_data(finite_state_machine *fsm) {
         fsm->add_data(msg);
         return 0;
     } else {
-        fprintf(stderr, "Error receiving CAN message\n");
+        fprintf(stderr, "No CAN message received\n");
         return -1;
     } 
 }

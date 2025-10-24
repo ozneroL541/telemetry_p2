@@ -23,7 +23,7 @@ add_library(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/fsm.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/can_reader.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/parser.cpp
-    #${CMAKE_CURRENT_SOURCE_DIR}/src/statistics_handler.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/statistics_handler.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}

@@ -39,15 +39,14 @@ char * id_stat::get_csv_line() {
     return csv_line;
 }
 
-statistics_handler::statistics_handler(parsed_msg msg) {
-    /** Message ID */
-    uint16_t msg_id = msg.get_id();
+statistics_handler::statistics_handler(parsed_msg msg)
+{
     /** First statistic */
     id_stat initial_stat(msg.get_timestamp());
 
     this->timestamp = msg.get_timestamp();
     stats.clear();
-    this->stats.insert({msg_id, initial_stat});
+    this->stats.insert({msg.get_id(), initial_stat});
 }
 
 statistics_handler::~statistics_handler() {
@@ -86,7 +85,7 @@ void statistics_handler::print_stats() {
 
     /** Write statistics for each message ID */
     for (auto& stat : this->stats) {
-        fprintf(file, "%04x,%s\n", stat.first, stat.second.get_csv_line());
+        fprintf(file, "%03X,%s\n", stat.first, stat.second.get_csv_line());
     }
 
     /** Close the file */

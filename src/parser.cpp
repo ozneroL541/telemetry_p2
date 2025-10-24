@@ -67,7 +67,11 @@ char parsed_msg::is_stop_message() {
 }
 
 char * parsed_msg::get_msg() {
+    /** Static buffer for the message */
+    static char buffer[MAX_CAN_MESSAGE_SIZE];
+    /** Number of bytes in payload */
     int payload_bytes = 0;
+    /** Auxiliary variable for payload processing */
     uint64_t temp_payload = this->payload;
     
     if (temp_payload == 0) {
@@ -82,7 +86,6 @@ char * parsed_msg::get_msg() {
         payload_bytes++;
     }
 
-    static char buffer[32];
     sprintf(buffer, "%03X#", this->id);
     std::string result = buffer;
     
