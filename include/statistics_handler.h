@@ -18,21 +18,24 @@ class id_stat {
 private:
     /** The number of messages received */
     unsigned long number_of_messages;
-    /** The mean time between messages */
-    double mean_time;
+    /** The sum of intervals between messages */
+    double sum_of_intervals;
     /** The timestamp of the last received message */
     time_t last_timestamp;
 
     /** 
-     * Update the mean time between messages.
+     * Update the intervals between messages.
      * @param timestamp The timestamp of the new message.
     */
-    void update_mean_time(time_t timestamp);
+    void update_intervals(time_t timestamp);
+    /** Get the mean time between messages.
+     * @return The mean time between messages.
+    */
+    double get_mean_time();
 public:
     /** 
      * Constructor for id_stat class.
-     * Initializes the message ID and sets
-     * the number of messages and mean time to zero.
+     * Initializes the statistics.
      * @param timestamp The timestamp of the first message.
     */
     id_stat(time_t timestamp);
@@ -69,7 +72,7 @@ public:
      * Initializes statistics with the first received message.
      * @param msg The first received message.
      */
-    statistics_handler(message msg);
+    statistics_handler(parsed_msg msg);
     /** 
      * Destructor for statistics_handler class.
      */
@@ -79,7 +82,7 @@ public:
      * Updates existing statistics or creates new ones as needed.
      * @param msg The new message to add.
      */
-    void add_message(message msg);
+    void add_message(parsed_msg msg);
     /** 
      * Print the collected statistics to 
      * a CSV file named as the initial timestamp.

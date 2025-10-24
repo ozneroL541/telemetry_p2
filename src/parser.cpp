@@ -2,7 +2,7 @@
 
 void parsed_msg::parse_message(const char * msg, const int length) {
     /** Regular expression for parsing the message */
-    const char regex[] = "^(\b[0-9A-Fa-f]{3}\b)#(\b(?:[0-9A-Fa-f]{2}){1,8}\b)$";
+    const char regex[] = "^([0-9A-Fa-f]{3})#((?:[0-9A-Fa-f]{2}){1,8})$";
     /** Regular expression object */
     std::regex re(regex);
     /** String representation of the message */
@@ -13,6 +13,8 @@ void parsed_msg::parse_message(const char * msg, const int length) {
     if (std::regex_match(msg_str, m, re) && m.size() >= 3) {
         this->id = static_cast<uint16_t>(std::stoul(m[1].str(), nullptr, 16));
         this->payload = static_cast<uint64_t>(std::stoull(m[2].str(), nullptr, 16));
+    } else {
+        fprintf(stderr, "Error: Invalid message format: %s\n", msg);
     }
 }
 
@@ -65,16 +67,33 @@ char parsed_msg::is_stop_message() {
 }
 
 char * parsed_msg::get_msg() {
-    /** Get the message content */
-    static char msg_buffer[MAX_CAN_MESSAGE_SIZE];
-    int len = snprintf(
-        msg_buffer, 
-        MAX_CAN_MESSAGE_SIZE, 
-        "%03X#%llX",
-        this->id, 
-        this->payload
-    );
-    return msg_buffer;
+    int payload_bytes = 0;
+    uint64_t temp_payload = this->payload;
+    
+    if (temp_payload == 0) {
+        payload_bytes = 1;
+    } else {
+        while (temp_payload > 0) {
+            payload_bytes++;
+            temp_payload >>= 8;
+        }
+    }
+    if (payload_bytes % 2 != 0) {
+        payload_bytes++;
+    }
+
+    static char buffer[32];
+    sprintf(buffer, "%03X#", this->id);
+    std::string result = buffer;
+    
+    for (int i = payload_bytes - 1; i >= 0; i--) {
+        uint8_t byte = (this->payload >> (i * 8)) & 0xFF;
+        sprintf(buffer, "%02X", byte);
+        result += buffer;
+    }
+    snprintf(buffer, sizeof(buffer), "%s", result.c_str());
+    
+    return buffer;
 }
 
 char * parsed_msg::get_log() {
@@ -93,4 +112,8 @@ char * parsed_msg::get_log() {
         log_buffer[0] = '\0';
     }
     return log_buffer;
+}
+
+time_t parsed_msg::get_timestamp() {
+    return this->timestamp;
 }

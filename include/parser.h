@@ -91,6 +91,11 @@ public:
      * @return The message log
      */
     char * get_log();
+    /** 
+     * Get the message timestamp
+     * @return The message timestamp
+     */
+    time_t get_timestamp();
 };
 
 #endif

@@ -2,21 +2,22 @@
 
 id_stat::id_stat(time_t timestamp) {
     this->number_of_messages = 1;
-    this->mean_time = 0.0;
+    this->sum_of_intervals = 0.0;
     this->last_timestamp = timestamp;
 }
 
 id_stat::~id_stat() {}
 
-void id_stat::update_mean_time(time_t timestamp) {
-    /** Time difference between the current and last message */
-    double time_diff = difftime(timestamp, this->last_timestamp);
-    this->mean_time = ((this->mean_time * this->number_of_messages) + time_diff) 
-                    / (this->number_of_messages + 1);
+void id_stat::update_intervals(time_t timestamp) {
+    this->sum_of_intervals += difftime(timestamp, this->last_timestamp);;
+}
+
+double id_stat::get_mean_time() {
+    return this->sum_of_intervals / this->number_of_messages;
 }
 
 void id_stat::update_stats(time_t timestamp) {
-    this->update_mean_time(timestamp);
+    this->update_intervals(timestamp);
     this->last_timestamp = timestamp;
     this->number_of_messages++;
 }
@@ -30,7 +31,7 @@ char * id_stat::get_csv_line() {
         sizeof(csv_line),
         "%lu,%.3f",
         (unsigned long)this->number_of_messages,
-        this->mean_time
+        this->get_mean_time()
     );
     if (len <= 0 || len >= sizeof(csv_line)) {
         csv_line[0] = '\0';
@@ -38,7 +39,7 @@ char * id_stat::get_csv_line() {
     return csv_line;
 }
 
-statistics_handler::statistics_handler(message msg) {
+statistics_handler::statistics_handler(parsed_msg msg) {
     /** Message ID */
     uint16_t msg_id = msg.get_id();
     /** First statistic */
@@ -53,7 +54,7 @@ statistics_handler::~statistics_handler() {
     stats.clear();
 }
 
-void statistics_handler::add_message(message msg) {
+void statistics_handler::add_message(parsed_msg msg) {
     /** Find if the ID already exists */
     auto it = this->stats.find(msg.get_id());
     if (it != this->stats.end()) {
