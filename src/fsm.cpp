@@ -44,7 +44,6 @@ template <typename T>
 T finite_state_machine::read_first(std::list<T> &list, pthread_mutex_t &mx, sem_t &sem) {
     /** Element to return */
     T el;
-
     sem_wait(&sem);
     pthread_mutex_lock(&mx);
     if (!list.empty()) {

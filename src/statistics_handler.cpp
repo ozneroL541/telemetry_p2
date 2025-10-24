@@ -39,8 +39,7 @@ char * id_stat::get_csv_line() {
     return csv_line;
 }
 
-statistics_handler::statistics_handler(parsed_msg msg)
-{
+statistics_handler::statistics_handler(parsed_msg msg) {
     /** First statistic */
     id_stat initial_stat(msg.get_timestamp());
 
