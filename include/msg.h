@@ -1,13 +1,14 @@
 #ifndef include_MSG_H
 #define include_MSG_H
 
+#include "parser.h"
+
 #include <ctime>
-#include <string>
+#include <cstdint>
+#include <cstdio>
 #ifndef MAX_CAN_MESSAGE_SIZE
 #define MAX_CAN_MESSAGE_SIZE 20
 #endif
-
-#define MAX_LOG_SIZE (MAX_CAN_MESSAGE_SIZE + 12)
 
 /** 
  * Class to handle the messages containing 
@@ -29,28 +30,28 @@ public:
      * @param length The message length
      */
     message(const char msg[MAX_CAN_MESSAGE_SIZE], const int length);
+    /**
+     * Void constructor
+     * TMCH
+     */
+    message();
     /** Destructor */
     ~message();
+    /** 
+     * Checks if the message is empty
+     * @return 1 if the message is empty, 0 otherwise
+     */
+    char is_empty();
     /**
      * Get the timestamp of the message
      * @return The message timestamp
      */
     time_t get_timestamp();
     /**
-     * Get the message ID
-     * @return The message ID
+     * Get the parsed message
+     * @return The parsed message
      */
-    int16_t get_id();
-    /**
-     * Get the message content as a string
-     * @return The message content
-     */
-    std::string get_msg();
-    /**
-     * Get a log with unix timestamp and message
-     * @return The message log
-     */
-    char * get_log();
+    parsed_msg get_parsed_msg();
 };
 
 #endif

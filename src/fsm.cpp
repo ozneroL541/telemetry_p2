@@ -1,36 +1,54 @@
 #include "fsm.h"
 
-static char is_start_message(std::string message) {
-    for (const auto& start_msg : start_messages) {
-        if (start_msg == message) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-static char is_stop_message(std::string message) {
-    return stop_message == message ? 1 : 0;
-}
-
 finite_state_machine::finite_state_machine() {
     pthread_mutex_init(&this->state_mx, NULL);
     pthread_mutex_init(&this->data_mx, NULL);
     pthread_mutex_init(&this->transmission_over_mx, NULL);
+    pthread_mutex_init(&this->parsed_list_mx, NULL);
+    sem_init(&this->parsed_list_sem, 0, 0);
     sem_init(&this->data_sem, 0, 0);
     this->transmission_over = 0;
     this->log_file = NULL;
     this->state = IDLE;
     data_list.clear();
+    parsed_list.clear();
 }
 
 finite_state_machine::~finite_state_machine() {
     pthread_mutex_destroy(&this->state_mx);
     pthread_mutex_destroy(&this->data_mx);
     pthread_mutex_destroy(&this->transmission_over_mx);
+    pthread_mutex_destroy(&this->parsed_list_mx);
     fclose(this->log_file);
     data_list.clear();
+    parsed_list.clear();
     sem_destroy(&this->data_sem);
+    sem_destroy(&this->parsed_list_sem);
+}
+
+template <typename T>
+void finite_state_machine::add_el_to_list(T el, std::list<T> &list, pthread_mutex_t &mx, sem_t &sem) {
+    pthread_mutex_lock(&mx);
+    list.push_back(el);
+    pthread_mutex_unlock(&mx);
+    sem_post(&sem);
+}
+
+template <typename T>
+T finite_state_machine::read_first(std::list<T> &list, pthread_mutex_t &mx, sem_t &sem) {
+    /** Element to return */
+    T el;
+
+    sem_wait(&sem);
+    pthread_mutex_lock(&mx);
+    if (!list.empty()) {
+        el = list.front();
+        list.pop_front();
+    } else {
+        fprintf(stderr, "List is empty when trying to read first element\n");
+    }
+    pthread_mutex_unlock(&mx);
+    return el;
 }
 
 void finite_state_machine::transition_to_running() {
@@ -87,71 +105,105 @@ char finite_state_machine::is_transmission_over() {
 }
 
 void finite_state_machine::add_data(message data) {
-    pthread_mutex_lock(&this->data_mx);
-    this->data_list.push_back(data);
-    pthread_mutex_unlock(&this->data_mx);
-    sem_post(&this->data_sem);
+    add_el_to_list<message>(data, this->data_list, this->data_mx, this->data_sem);
 }
 
 message finite_state_machine::read_first_data() {
-    /** First data message from the list */
-    message data = message("", 0); /* TODO: Check memory leaks */
-    sem_wait(&this->data_sem);
-    pthread_mutex_lock(&this->data_mx);
-    if (!data_list.empty()) {
-        data = data_list.front();
-        data_list.pop_front();
-    } else {
-        fprintf(stderr, "Data list is empty when trying to read first data\n");
-    }
-    pthread_mutex_unlock(&this->data_mx);
-    return data;
+    return read_first<message>(this->data_list, this->data_mx, this->data_sem);
 }
 
-void finite_state_machine::log_message(message data) {
+parsed_msg finite_state_machine::read_first_parsed_msg() {
+    return read_first<parsed_msg>(this->parsed_list, this->parsed_list_mx, this->parsed_list_sem);
+}
+
+void finite_state_machine::add_parsed_msg(parsed_msg pdata) {
+    add_el_to_list<parsed_msg>(pdata, this->parsed_list, this->parsed_list_mx, this->parsed_list_sem);
+}
+
+void finite_state_machine::parse_data() {
+    /** Data to parse */
+    message data = this->read_first_data();
+    if (!data.is_empty()) {
+        this->add_parsed_msg(data.get_parsed_msg());
+    }
+}
+
+void finite_state_machine::parse_data_t() {
+    while (!this->is_transmission_over() || !sem_trywait(&this->data_sem)) {
+        this->parse_data();
+    }
+}
+
+void finite_state_machine::log_message(parsed_msg pmsg) {
     if (this->log_file != NULL) {
         fprintf(
             this->log_file, 
             "%s\n", 
-            data.get_log()
+            pmsg.get_log()
         );
         fflush(this->log_file);
     }
 }
 
-void finite_state_machine::idle_process(message data) {
-    if (is_start_message(data.get_msg())) {
+void finite_state_machine::idle_process(parsed_msg pmsg) {
+    if (pmsg.is_start_message()) {
         this->transition_to_running();
-        this->log_message(data);
+        this->log_message(pmsg);
     }
 }
 
-void finite_state_machine::running_process(message data) {
-    this->log_message(data);
-    if (is_stop_message(data.get_msg())) {
+void finite_state_machine::running_process(parsed_msg pmsg) {
+    this->log_message(pmsg);
+    if (pmsg.is_stop_message()) {
         this->transition_to_idle();
     }
 }
 
 void finite_state_machine::process_data() {
     /** Data to process */
-    message data = this->read_first_data();
-    /* Check if data is empty */
-    if (data.get_msg().empty()) {
+    parsed_msg pmsg = this->read_first_parsed_msg();
+    /* Check if the message is valid */
+    if (pmsg.is_empty()) {
         return;
     }
-    /* TODO: add data parsing*/
     /* Process the data based on the current state */
     if (this->is_idle()) {
-        this->idle_process(data);
+        this->idle_process(pmsg);
     } else if (this->is_running()) {
-        this->running_process(data);
+        this->running_process(pmsg);
     }
 }
 
-void * finite_state_machine::process_data_thread(void * arg) {
-    while (!this->is_transmission_over() || !sem_trywait(&this->data_sem)) {
+void finite_state_machine::process_data_t() {
+    while (!this->is_transmission_over() || !sem_trywait(&this->parsed_list_sem) || !sem_trywait(&this->data_sem)) {
         this->process_data();
     }
-    pthread_exit(arg);
+}
+
+void finite_state_machine::start_machine() {
+    /** Thread identifiers */
+    pthread_t parse_thread;
+    pthread_t process_thread;
+
+    /** Create threads */
+    pthread_create(&parse_thread, NULL, parse_data_thread, this);
+    pthread_create(&process_thread, NULL, process_data_thread, this);
+
+    /** Join threads */
+    pthread_join(parse_thread, NULL);
+    pthread_join(process_thread, NULL);
+}
+
+void *parse_data_thread(void *arg) {
+    /** Finite State Machine */
+    finite_state_machine *fsm = static_cast<finite_state_machine *>(arg);
+    fsm->parse_data_t();
+    return arg;
+}
+
+void *process_data_thread(void *arg) {
+    /** Finite State Machine */
+    finite_state_machine *fsm = static_cast<finite_state_machine *>(arg);
+    fsm->process_data_t();
+    return arg;
 }

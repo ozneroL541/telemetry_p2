@@ -9,31 +9,23 @@ message::message(const char msg[MAX_CAN_MESSAGE_SIZE], const int length) {
     }
 }
 
+message::message() {
+    this->timestamp = 0;
+    this->msg[0] = '\0';
+    this->length = 0;
+}
+
 message::~message() {}
+
+char message::is_empty() {
+    return this->timestamp == 0 && this->length == 0;
+}
 
 time_t message::get_timestamp() {
     return this->timestamp;
 }
 
-std::string message::get_msg() {
-    return std::string(msg, length);
-}
-
-char * message::get_log() {
-    /** Generate a log entry with timestamp and message */
-    static char log_buffer[MAX_LOG_SIZE];
-    /** Get the length of the message */
-    int len = snprintf(
-        log_buffer, 
-        MAX_LOG_SIZE, 
-        "%ld %.*s", 
-        this->timestamp, 
-        this->length, 
-        this->msg
-    );
-    
-    if (len <= 0 || len >= MAX_LOG_SIZE) {
-        log_buffer[0] = '\0';
-    }
-    return log_buffer;
+parsed_msg message::get_parsed_msg() {
+    parsed_msg pmsg(this->timestamp, this->msg, this->length);
+    return pmsg;
 }

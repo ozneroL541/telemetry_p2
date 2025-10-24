@@ -2,6 +2,7 @@
 #define FSM_H
 
 #include "msg.h"
+#include "parser.h"
 
 #include <stdio.h>
 #include <pthread.h>
@@ -19,23 +20,6 @@ typedef enum {
     RUNNING
 } state_t;
 
-/** Start messages */
-const static std::list<std::string> start_messages = {"0A0#6601", "0A0#FF01"};
-/** Stop message */
-const static std::string stop_message = "0A0#66FF";
-/** 
- * Checks if the received message is a start message
- * @param message The received message
- * @return 1 if the message is a start message, 0 otherwise
- */
-static char is_start_message(std::string message);
-/** 
- * Checks if the received message is a stop message
- * @param message The received message
- * @return 1 if the message is a stop message, 0 otherwise
- */
-static char is_stop_message(std::string message);
-
 /** 
  * Finite State Machine class
  * @class finite_state_machine
@@ -52,6 +36,12 @@ class finite_state_machine {
         pthread_mutex_t  data_mx;
         /** Semaphore for data availability */
         sem_t data_sem;
+        /** List of parsed messages */
+        std::list<parsed_msg> parsed_list;
+        /** Mutex for parsed_list access */
+        pthread_mutex_t parsed_list_mx;
+        /** Semaphore for parsed_list availability */
+        sem_t parsed_list_sem;
         /** Log file pointer */
         FILE *log_file;
         /** Flag indicating if transmission is finished */
@@ -73,20 +63,43 @@ class finite_state_machine {
          */
         message read_first_data();
         /** 
-         * Processes data in the IDLE state
-         * @param data The data to be processed
+         * Returns the first parsed message in the parsed list
+         * @return The first parsed message in the list
          */
-        void idle_process(message data);
+        parsed_msg read_first_parsed_msg();
         /** 
-         * Processes data in the RUNNING state
-         * @param data The data to be processed
+         * Processes the parsed message in the IDLE state
+         * @param pmsg The data to be processed
          */
-        void running_process(message data);
+        void idle_process(parsed_msg pmsg);
+        /** 
+         * Processes the parsed message in the RUNNING state
+         * @param pmsg The data to be processed
+         */
+        void running_process(parsed_msg pmsg);
         /** 
          * Logs the message to the log file
-         * @param data The data to be logged
+         * @param pmsg The message to be logged
          */
-        void log_message(message data);
+        void log_message(parsed_msg pmsg);
+        /** 
+         * Template function to add an element to a list
+         * @param el The element to be added
+         * @param list The list to which the element is added
+         * @param mx The mutex for the list
+         * @param sem The semaphore for the list
+         */
+        template<typename T>
+        void add_el_to_list(T el, std::list<T> &list, pthread_mutex_t &mx, sem_t &sem);
+        /** 
+         * Template function to read the first element from a list
+         * @param list The list from which to read the element
+         * @param mx The mutex for the list
+         * @param sem The semaphore for the list
+         * @return The first element from the list
+         */
+        template<typename T>
+        T read_first(std::list<T> &list, pthread_mutex_t &mx, sem_t &sem);
     public:
         /** 
          * Constructor.
@@ -123,16 +136,48 @@ class finite_state_machine {
          */
         void add_data(message data);
         /** 
+         * Adds a parsed message to the parsed list
+         * @param pdata The parsed message to be added
+         */
+        void add_parsed_msg(parsed_msg pdata);
+        /** 
+         * Parses data from the data list
+         */
+        void parse_data();
+        /** 
+         * Thread function to parse data
+         * from the data list
+         */
+        void parse_data_t();
+        /** 
          * Processes the data in the data list
          */
         void process_data();
         /** 
          * Thread function to process data
          * from the data list
-         * @param arg TMCH
-         * @return arg
          */
-        void * process_data_thread(void * arg);
+        void process_data_t();
+        /** 
+         * Starts the finite state machine
+         * by starting parsing and processing threads
+         */
+        void start_machine();
 };
+
+/**
+ * Thread function to parse data
+ * from the data list
+ * @param arg The finite state machine pointer
+ * @return arg
+ */
+void * parse_data_thread(void * arg );
+/**
+ * Thread function to process data
+ * from the data list
+ * @param arg The finite state machine pointer
+ * @return arg
+ */
+void * process_data_thread(void * arg );
 
 #endif
