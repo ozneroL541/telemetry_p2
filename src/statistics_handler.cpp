@@ -1,6 +1,6 @@
 #include "statistics_handler.h"
 
-id_stat::id_stat(time_t timestamp) {
+id_stat::id_stat(timespec timestamp) {
     this->number_of_messages = 1;
     this->sum_of_intervals = 0.0;
     this->last_timestamp = timestamp;
@@ -8,15 +8,18 @@ id_stat::id_stat(time_t timestamp) {
 
 id_stat::~id_stat() {}
 
-void id_stat::update_intervals(time_t timestamp) {
-    this->sum_of_intervals += difftime(timestamp, this->last_timestamp);;
+void id_stat::update_intervals(timespec timestamp) {
+    double interval = (timestamp.tv_sec - this->last_timestamp.tv_sec) + 
+                      (timestamp.tv_nsec - this->last_timestamp.tv_nsec) 
+                      / 1e9;
+    this->sum_of_intervals += interval;
 }
 
 double id_stat::get_mean_time() {
     return this->sum_of_intervals / this->number_of_messages;
 }
 
-void id_stat::update_stats(time_t timestamp) {
+void id_stat::update_stats(timespec timestamp) {
     this->update_intervals(timestamp);
     this->last_timestamp = timestamp;
     this->number_of_messages++;
@@ -67,7 +70,7 @@ void statistics_handler::add_message(parsed_msg msg) {
 
 void statistics_handler::print_stats() {
     /** Filename based on the initial timestamp */
-    std::string filename = std::to_string(this->timestamp) + ".csv";
+    std::string filename = std::to_string(this->timestamp.tv_sec) + ".csv";
     /** Open the file for writing */
     FILE *file = fopen(filename.c_str(), "a");
     if (file == NULL) {

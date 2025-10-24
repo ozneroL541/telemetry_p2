@@ -1,8 +1,10 @@
 #include "msg.h"
 
 message::message(const char msg[MAX_CAN_MESSAGE_SIZE], const int length) {
+    /** Index */
     char i = 0;
-    this->timestamp = time(nullptr);
+    
+    clock_gettime(CLOCK_REALTIME, &this->timestamp);
     this->length = length;
     for (i = 0; i < length && i < MAX_CAN_MESSAGE_SIZE; i++) {
         this->msg[i] = msg[i];
@@ -10,7 +12,8 @@ message::message(const char msg[MAX_CAN_MESSAGE_SIZE], const int length) {
 }
 
 message::message() {
-    this->timestamp = 0;
+    this->timestamp.tv_sec = 0;
+    this->timestamp.tv_nsec = 0;
     this->msg[0] = '\0';
     this->length = 0;
 }
@@ -18,10 +21,10 @@ message::message() {
 message::~message() {}
 
 char message::is_empty() {
-    return this->timestamp == 0 && this->length == 0;
+    return this->timestamp.tv_sec == 0 && this->length == 0;
 }
 
-time_t message::get_timestamp() {
+timespec message::get_timestamp() {
     return this->timestamp;
 }
 

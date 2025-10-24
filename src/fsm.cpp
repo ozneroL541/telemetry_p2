@@ -1,4 +1,5 @@
 #include "fsm.h"
+#define DEBUG
 
 finite_state_machine::finite_state_machine() {
     pthread_mutex_init(&this->state_mx, NULL);
@@ -54,8 +55,9 @@ T finite_state_machine::read_first(std::list<T> &list, pthread_mutex_t &mx, sem_
 }
 
 void finite_state_machine::transition_to_running() {
-    time_t current_timestamp = time(NULL);
-    std::string filename = std::to_string(current_timestamp) + ".log";
+    timespec current_timestamp;
+    clock_gettime(CLOCK_REALTIME, &current_timestamp);
+    const std::string filename = std::to_string(current_timestamp.tv_sec) + ".log";
     pthread_mutex_lock(&this->state_mx);
     this->state = RUNNING;
     this->log_file = fopen(filename.c_str(), "a");
@@ -181,7 +183,7 @@ char finite_state_machine::is_processing_over(){
     #ifdef DEBUG
     printf("is_processing_over: %d\n", !are_lists_empty);
     #endif
-    return !are_lists_empty? 1 : 0;
+    return are_lists_empty? 1 : 0;
 }
 
 char finite_state_machine::is_parsing_over(){

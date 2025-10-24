@@ -18,7 +18,7 @@ void parsed_msg::parse_message(const char * msg, const int length) {
     }
 }
 
-parsed_msg::parsed_msg(const time_t timestamp, const char * msg,const int length) {
+parsed_msg::parsed_msg(const timespec timestamp, const char * msg,const int length) {
     this->timestamp = timestamp;
     this->id = 0;
     this->payload = 0;
@@ -26,7 +26,8 @@ parsed_msg::parsed_msg(const time_t timestamp, const char * msg,const int length
 }
 
 parsed_msg::parsed_msg() {
-    this->timestamp = 0;
+    this->timestamp.tv_sec = 0;
+    this->timestamp.tv_nsec = 0;
     this->id = 0;
     this->payload = 0;
 }
@@ -38,7 +39,7 @@ uint16_t parsed_msg::get_id() {
 }
 
 char parsed_msg::is_empty() {
-    return this->timestamp == 0 && this->id == 0;
+    return this->timestamp.tv_sec == 0 && this->id == 0;
 }
 
 char parsed_msg::is_special_id() {
@@ -107,7 +108,7 @@ char * parsed_msg::get_log() {
         log_buffer, 
         MAX_LOG_SIZE, 
         "%ld %s", 
-        this->timestamp,
+        this->timestamp.tv_sec,
         this->get_msg()
     );
     
@@ -117,6 +118,6 @@ char * parsed_msg::get_log() {
     return log_buffer;
 }
 
-time_t parsed_msg::get_timestamp() {
+timespec parsed_msg::get_timestamp() {
     return this->timestamp;
 }

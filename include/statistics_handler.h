@@ -21,13 +21,13 @@ private:
     /** The sum of intervals between messages */
     double sum_of_intervals;
     /** The timestamp of the last received message */
-    time_t last_timestamp;
+    timespec last_timestamp;
 
     /** 
      * Update the intervals between messages.
      * @param timestamp The timestamp of the new message.
     */
-    void update_intervals(time_t timestamp);
+    void update_intervals(timespec timestamp);
     /** Get the mean time between messages.
      * @return The mean time between messages.
     */
@@ -38,7 +38,7 @@ public:
      * Initializes the statistics.
      * @param timestamp The timestamp of the first message.
     */
-    id_stat(time_t timestamp);
+    id_stat(timespec timestamp);
     /** 
      * Destructor for id_stat class.
     */
@@ -47,7 +47,7 @@ public:
      * Update statistics with a new timestamp.
      * @param timestamp The timestamp of the new message.
     */
-    void update_stats(time_t timestamp);
+    void update_stats(timespec timestamp);
     /** 
      * Get a CSV line representing the statistics.
      * @return A string in CSV format with ID, number of messages, and mean time.
@@ -63,7 +63,7 @@ public:
 class statistics_handler {
 private:
     /** The timestamp of the first received message */
-    time_t timestamp;
+    timespec timestamp;
     /** Ordered map of statistics for each message ID */
     std::map<uint16_t, id_stat> stats;
 public:

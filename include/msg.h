@@ -22,7 +22,7 @@ private:
     /** Message length */
     int length;
     /** Timestamp of the message */
-    time_t timestamp;
+    timespec timestamp;
 public:
     /**
      * Constructor.
@@ -46,7 +46,7 @@ public:
      * Get the timestamp of the message
      * @return The message timestamp
      */
-    time_t get_timestamp();
+    timespec get_timestamp();
     /**
      * Get the parsed message
      * @return The parsed message

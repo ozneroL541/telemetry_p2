@@ -18,7 +18,7 @@
 class parsed_msg {
 private:
     /** Message timestamp */
-    time_t timestamp;
+    timespec timestamp;
     /** Message ID */
     uint16_t id;
     /** Message payload */
@@ -41,7 +41,7 @@ public:
      * @param msg The message content
      * @param length The message length
      */
-    parsed_msg(const time_t timestamp, const char * msg, const int length);
+    parsed_msg(const timespec timestamp, const char * msg, const int length);
     /** 
      * Void Constructor
      * TMCH
@@ -95,7 +95,7 @@ public:
      * Get the message timestamp
      * @return The message timestamp
      */
-    time_t get_timestamp();
+    timespec get_timestamp();
 };
 
 #endif
