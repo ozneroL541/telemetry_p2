@@ -17,19 +17,16 @@ finite_state_machine::finite_state_machine() {
 }
 
 finite_state_machine::~finite_state_machine() {
+    this->transition_to_idle();
     pthread_mutex_destroy(&this->state_mx);
     pthread_mutex_destroy(&this->data_mx);
     pthread_mutex_destroy(&this->transmission_over_mx);
     pthread_mutex_destroy(&this->parsed_list_mx);
     pthread_mutex_destroy(&this->stats_handler_mx);
-    fclose(this->log_file);
     data_list.clear();
     parsed_list.clear();
     sem_destroy(&this->data_sem);
     sem_destroy(&this->parsed_list_sem);
-    if (this->stats_handler != NULL) {
-        delete this->stats_handler;
-    }
 }
 
 template <typename T>
@@ -174,19 +171,26 @@ void finite_state_machine::do_running_stuff(const parsed_msg pmsg) {
 }
 
 char finite_state_machine::is_processing_over(){
-    char result = 1;
+    char are_lists_empty = 0;
     pthread_mutex_lock(&this->data_mx);
-    pthread_mutex_lock(&this->parsed_list_mx);
-    result = this->data_list.empty() && this->parsed_list.empty() ? 1 : 0;
-    pthread_mutex_unlock(&this->parsed_list_mx);
+    are_lists_empty += this->data_list.empty() ? 1 : 0;
     pthread_mutex_unlock(&this->data_mx);
-    return result;
+    pthread_mutex_lock(&this->parsed_list_mx);
+    are_lists_empty += this->parsed_list.empty() ? 1 : 0;
+    pthread_mutex_unlock(&this->parsed_list_mx);
+    #ifdef DEBUG
+    printf("is_processing_over: %d\n", !are_lists_empty);
+    #endif
+    return !are_lists_empty? 1 : 0;
 }
 
 char finite_state_machine::is_parsing_over(){
     char result = 1;
     pthread_mutex_lock(&this->data_mx);
     result = this->data_list.empty() ? 1 : 0;
+    #ifdef DEBUG
+    printf("is_parsing_over: %d\n", result);
+    #endif
     pthread_mutex_unlock(&this->data_mx);
     return result;
 }
