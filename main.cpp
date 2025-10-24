@@ -23,5 +23,6 @@ int main(void){
     close_can();
     pthread_join(machine_thread, NULL);
     delete fsm;
+    printf("Execution finished\n");
     return 0;
 }

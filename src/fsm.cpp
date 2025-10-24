@@ -1,5 +1,4 @@
 #include "fsm.h"
-#define DEBUG
 
 finite_state_machine::finite_state_machine() {
     pthread_mutex_init(&this->state_mx, NULL);
@@ -34,8 +33,8 @@ template <typename T>
 void finite_state_machine::add_el_to_list(const T el, std::list<T> &list, pthread_mutex_t &mx, sem_t &sem) {
     pthread_mutex_lock(&mx);
     list.push_back(el);
-    pthread_mutex_unlock(&mx);
     sem_post(&sem);
+    pthread_mutex_unlock(&mx);
 }
 
 template <typename T>
@@ -82,7 +81,7 @@ void finite_state_machine::transition_to_idle() {
         fclose(this->log_file);
         this->log_file = NULL;
     }
-       
+    
     pthread_mutex_unlock(&this->state_mx);
 }
 
@@ -141,9 +140,12 @@ void finite_state_machine::parse_data() {
 }
 
 void finite_state_machine::parse_data_t() {
-    while (!this->is_transmission_over() || !this->is_parsing_over()) {
+    while (!this->is_parsing_over()) {
         this->parse_data();
     }
+    #ifdef DEBUG
+    printf("Parsing finished\n");
+    #endif
 }
 
 void finite_state_machine::log_message(parsed_msg pmsg) {
@@ -174,26 +176,21 @@ void finite_state_machine::do_running_stuff(const parsed_msg pmsg) {
 
 char finite_state_machine::is_processing_over(){
     char are_lists_empty = 0;
-    pthread_mutex_lock(&this->data_mx);
-    are_lists_empty += this->data_list.empty() ? 1 : 0;
-    pthread_mutex_unlock(&this->data_mx);
-    pthread_mutex_lock(&this->parsed_list_mx);
-    are_lists_empty += this->parsed_list.empty() ? 1 : 0;
-    pthread_mutex_unlock(&this->parsed_list_mx);
-    #ifdef DEBUG
-    printf("is_processing_over: %d\n", !are_lists_empty);
-    #endif
-    return are_lists_empty? 1 : 0;
+    if(this->is_parsing_over()){
+        pthread_mutex_lock(&this->parsed_list_mx);
+        are_lists_empty = this->parsed_list.empty() ? 1 : 0;
+        pthread_mutex_unlock(&this->parsed_list_mx);
+    }
+    return are_lists_empty;
 }
 
 char finite_state_machine::is_parsing_over(){
-    char result = 1;
+    char result = 0;
+    pthread_mutex_lock(&this->transmission_over_mx);
     pthread_mutex_lock(&this->data_mx);
-    result = this->data_list.empty() ? 1 : 0;
-    #ifdef DEBUG
-    printf("is_parsing_over: %d\n", result);
-    #endif
+    result = this->transmission_over && this->data_list.empty();
     pthread_mutex_unlock(&this->data_mx);
+    pthread_mutex_unlock(&this->transmission_over_mx);
     return result;
 }
 
@@ -225,21 +222,24 @@ void finite_state_machine::process_data() {
     /* Process the data based on the current state */
     if (this->is_idle()) {
         #ifdef DEBUG
-        printf("IDLE: %s\n", pmsg.get_log());
+        printf("IDLE:\t%s\n", pmsg.get_log());
         #endif
         this->idle_process(pmsg);
     } else if (this->is_running()) {
         #ifdef DEBUG
-        printf("RUNNING: %s\n", pmsg.get_log());
+        printf("RUNNING:\t%s\n", pmsg.get_log());
         #endif
         this->running_process(pmsg);
     }
 }
 
 void finite_state_machine::process_data_t() {
-    while (!this->is_transmission_over() || !this->is_processing_over()) {
+    while (!this->is_processing_over()) {
         this->process_data();
     }
+    #ifdef DEBUG
+    printf("Processing finished\n");
+    #endif
 }
 
 void finite_state_machine::run() {
@@ -260,14 +260,14 @@ void *parse_data_thread(void *arg) {
     /** Finite State Machine */
     finite_state_machine *fsm = static_cast<finite_state_machine *>(arg);
     fsm->parse_data_t();
-    pthread_exit(arg);
+    return arg;
 }
 
 void *process_data_thread(void *arg) {
     /** Finite State Machine */
     finite_state_machine *fsm = static_cast<finite_state_machine *>(arg);
     fsm->process_data_t();
-    pthread_exit(arg);
+    return arg;
 }
 
 void * start_machine(void * arg) {
