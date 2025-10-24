@@ -84,7 +84,7 @@ void statistics_handler::print_stats() {
 
     /** Write statistics for each message ID */
     for (auto& stat : this->stats) {
-        fprintf(file, "%03X,%s\n", stat.first, stat.second.get_csv_line());
+        fprintf(file, "%03X,%s\n", static_cast<unsigned int>(stat.first), stat.second.get_csv_line());
     }
 
     /** Close the file */

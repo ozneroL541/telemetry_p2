@@ -98,6 +98,16 @@ class finite_state_machine {
          */
         void do_running_stuff(const parsed_msg pmsg);
         /** 
+         * Returns whether the parsing is over
+         * @return 1 if parsing is over, 0 otherwise
+         */
+        char is_parsing_over();
+        /** 
+         * Returns whether the processing is over
+         * @return 1 if processing is over, 0 otherwise
+         */
+        char is_processing_over();
+        /** 
          * Template function to add an element to a list
          * @param el The element to be added
          * @param list The list to which the element is added
@@ -174,10 +184,10 @@ class finite_state_machine {
          */
         void process_data_t();
         /** 
-         * Starts the finite state machine
-         * by starting parsing and processing threads
+         * Executes the elaboration activities
+         * the finite state machine is supposed to do
          */
-        void start_machine();
+        void run();
 };
 
 /**
@@ -194,5 +204,11 @@ void * parse_data_thread(void * arg );
  * @return arg
  */
 void * process_data_thread(void * arg );
+/**
+ * Thread function to start the finite state machine
+ * @param arg The finite state machine pointer
+ * @return arg
+ */
+void * start_machine(void * arg );
 
 #endif

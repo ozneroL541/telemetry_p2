@@ -142,7 +142,7 @@ void finite_state_machine::parse_data() {
 }
 
 void finite_state_machine::parse_data_t() {
-    while (!this->is_transmission_over() || !sem_trywait(&this->data_sem)) {
+    while (!this->is_transmission_over() || !this->is_parsing_over()) {
         this->parse_data();
     }
 }
@@ -173,6 +173,25 @@ void finite_state_machine::do_running_stuff(const parsed_msg pmsg) {
     this->update_statistics(pmsg);
 }
 
+char finite_state_machine::is_processing_over(){
+    char result = 1;
+    pthread_mutex_lock(&this->data_mx);
+    pthread_mutex_lock(&this->parsed_list_mx);
+    result = this->data_list.empty() && this->parsed_list.empty() ? 1 : 0;
+    pthread_mutex_unlock(&this->parsed_list_mx);
+    pthread_mutex_unlock(&this->data_mx);
+    return result;
+}
+
+char finite_state_machine::is_parsing_over(){
+    char result = 1;
+    pthread_mutex_lock(&this->data_mx);
+    result = this->data_list.empty() ? 1 : 0;
+    pthread_mutex_unlock(&this->data_mx);
+    return result;
+}
+
+
 void finite_state_machine::idle_process(parsed_msg pmsg) {
     if (pmsg.is_start_message()) {
         this->transition_to_running();
@@ -192,23 +211,32 @@ void finite_state_machine::process_data() {
     parsed_msg pmsg = this->read_first_parsed_msg();
     /* Check if the message is valid */
     if (pmsg.is_empty()) {
+        #ifdef DEBUG
+        printf("Parsed message is empty\n");
+        #endif
         return;
     }
     /* Process the data based on the current state */
     if (this->is_idle()) {
+        #ifdef DEBUG
+        printf("IDLE: %s\n", pmsg.get_log());
+        #endif
         this->idle_process(pmsg);
     } else if (this->is_running()) {
+        #ifdef DEBUG
+        printf("RUNNING: %s\n", pmsg.get_log());
+        #endif
         this->running_process(pmsg);
     }
 }
 
 void finite_state_machine::process_data_t() {
-    while (!this->is_transmission_over() || !sem_trywait(&this->parsed_list_sem) || !sem_trywait(&this->data_sem)) {
+    while (!this->is_transmission_over() || !this->is_processing_over()) {
         this->process_data();
     }
 }
 
-void finite_state_machine::start_machine() {
+void finite_state_machine::run() {
     /** Thread identifiers */
     pthread_t parse_thread;
     pthread_t process_thread;
@@ -226,12 +254,19 @@ void *parse_data_thread(void *arg) {
     /** Finite State Machine */
     finite_state_machine *fsm = static_cast<finite_state_machine *>(arg);
     fsm->parse_data_t();
-    return arg;
+    pthread_exit(arg);
 }
 
 void *process_data_thread(void *arg) {
     /** Finite State Machine */
     finite_state_machine *fsm = static_cast<finite_state_machine *>(arg);
     fsm->process_data_t();
-    return arg;
+    pthread_exit(arg);
+}
+
+void * start_machine(void * arg) {
+    /** Finite State Machine */
+    finite_state_machine *fsm = static_cast<finite_state_machine *>(arg);
+    fsm->run();
+    pthread_exit(arg);
 }
