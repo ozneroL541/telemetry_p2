@@ -104,6 +104,10 @@ char finite_state_machine::is_running() {
 void finite_state_machine::set_transmission_over(const char status) {
     pthread_mutex_lock(&this->transmission_over_mx);
     this->transmission_over = status;
+    if (status) {
+        sem_post(&this->data_sem);
+        sem_post(&this->parsed_list_sem);
+    }
     pthread_mutex_unlock(&this->transmission_over_mx);
 }
 
